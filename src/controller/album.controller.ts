@@ -32,7 +32,7 @@ class AlbumController {
         { entity: "معرض الصور", action: "view", value: true },
         {
           sender: { id: req?.user.id },
-          message: "تم إنشاء البوم جديد",
+          message: "تم إنشاءالبوم جديد",
           action: "create",
           entity: { type: "معرض الصور", id: album._id },
           metadata: {
@@ -103,7 +103,7 @@ class AlbumController {
         { entity: "معرض الصور", action: "delete", value: true },
         {
           sender: { id: req?.user.id },
-          message: `تم حذف البوم`,
+          message: `تم حذف البوم `,
           action: "delete",
           entity: { type: "معرض الصور" },
           metadata: {
@@ -133,26 +133,14 @@ class AlbumController {
         );
       }
 
-      const album = await Album.findById(albumId)
-        .populate({
-          path: "images",
-          populate: {
-            path: "createdBy",
-            select: "-password -permissions -_id",
-            populate: {
-              path: "memberId",
-              select: "-password -permissions -_id",
-            },
-          },
-        })
-        .populate({
-          path: "createdBy",
+      const album = await Album.findById(albumId).populate("images").populate({
+        path: "createdBy",
+        select: "-password -permissions -_id",
+        populate: {
+          path: "memberId",
           select: "-password -permissions -_id",
-          populate: {
-            path: "memberId",
-            select: "-password -permissions -_id",
-          },
-        });
+        },
+      });
 
       if (!album) {
         return next(createCustomError("Album not found", HttpCode.NOT_FOUND));
@@ -192,17 +180,7 @@ class AlbumController {
         { $push: { images: newImage._id } },
         { new: true }
       )
-        .populate({
-          path: "images",
-          populate: {
-            path: "createdBy",
-            select: "-password -permissions -_id",
-            populate: {
-              path: "memberId",
-              select: "-password -permissions -_id",
-            },
-          },
-        })
+        .populate("images")
         .populate({
           path: "createdBy",
           select: "-password -permissions -_id",
@@ -220,7 +198,7 @@ class AlbumController {
         { entity: "معرض الصور", action: "update", value: true },
         {
           sender: { id: req?.user.id },
-          message: `${updatedAlbum.name} تم اضافة صورة الى البوم`,
+          message: `${updatedAlbum.name} تم اضافة صورة الى البوم `,
           action: "update",
           entity: { type: "معرض الصور", id: updatedAlbum._id },
           metadata: {
@@ -259,17 +237,7 @@ class AlbumController {
         new: true,
         runValidators: true,
       })
-        .populate({
-          path: "images",
-          populate: {
-            path: "createdBy",
-            select: "-password -permissions -_id",
-            populate: {
-              path: "memberId",
-              select: "-password -permissions -_id",
-            },
-          },
-        })
+        .populate("images")
         .populate({
           path: "createdBy",
           select: "-password -permissions -_id",
@@ -277,23 +245,21 @@ class AlbumController {
             path: "memberId",
             select: "-password -permissions -_id",
           },
-        });
-
-      await notifyUsersWithPermission(
-        { entity: "معرض الصور", action: "update", value: true },
-        {
-          sender: { id: req?.user.id },
-          message: `${updatedAlbum?.name} تم تعديل البوم`,
-          action: "update",
-          entity: { type: "معرض الصور", id: updatedAlbum?._id },
-          metadata: {
-            priority: "medium",
-          },
-          status: "sent",
-          read: false,
-          readAt: null,
-        }
-      );
+        }); await notifyUsersWithPermission(
+          { entity: "معرض الصور", action: "update", value: true },
+          {
+            sender: { id: req?.user.id },
+            message: `${updatedAlbum?.name} تم تعديل البوم `,
+            action: "update",
+            entity: { type: "معرض الصور", id: updatedAlbum?._id },
+            metadata: {
+              priority: "medium",
+            },
+            status: "sent",
+            read: false,
+            readAt: null,
+          }
+        );
 
       res.status(HttpCode.OK).json({
         success: true,
@@ -321,17 +287,7 @@ class AlbumController {
         { $pull: { images: imageId } },
         { new: true }
       )
-        .populate({
-          path: "images",
-          populate: {
-            path: "createdBy",
-            select: "-password -permissions -_id",
-            populate: {
-              path: "memberId",
-              select: "-password -permissions -_id",
-            },
-          },
-        })
+        .populate("images")
         .populate({
           path: "createdBy",
           select: "-password -permissions -_id",
@@ -340,7 +296,6 @@ class AlbumController {
             select: "-password -permissions -_id",
           },
         });
-
       if (!updatedAlbum) {
         return next(createCustomError("Album not found", HttpCode.NOT_FOUND));
       }
@@ -355,7 +310,7 @@ class AlbumController {
         { entity: "معرض الصور", action: "delete", value: true },
         {
           sender: { id: req?.user.id },
-          message: `${updatedAlbum?.name} تم حذف صورة من البوم`,
+          message: `${updatedAlbum?.name} تم حذف صورة من البوم `,
           action: "delete",
           entity: { type: "معرض الصور", id: updatedAlbum._id },
           metadata: {
@@ -390,17 +345,7 @@ class AlbumController {
       })
         .sort({ createdAt: -1 })
         .limit(5)
-        .populate({
-          path: "images",
-          populate: {
-            path: "createdBy",
-            select: "-password -permissions -_id",
-            populate: {
-              path: "memberId",
-              select: "-password -permissions -_id",
-            },
-          },
-        })
+        .populate("images")
         .populate({
           path: "createdBy",
           select: "-password -permissions -_id",

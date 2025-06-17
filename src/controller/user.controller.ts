@@ -526,6 +526,55 @@ class UserController {
     }
   );
 
+    swapMember = asyncWrapper(
+    async (req: Request, res: Response, next: NextFunction) => {
+      const { userId } = req.params;
+      const { newMemberId } = req.body;
+
+      // التحقق من وجود المستخدم والعضو الجديد
+      const user = await User.findById(userId);
+      if (!user) {
+        return next(createCustomError("User not found", HttpCode.NOT_FOUND));
+      }
+
+      const newMember = await Member.findById(newMemberId);
+      if (!newMember) {
+        return next(createCustomError("Member not found", HttpCode.NOT_FOUND));
+      }
+
+      // حفظ العضو الحالي للرجوع إليه إذا لزم الأمر
+      const currentMemberId = user.memberId;
+
+      // تحديث المستخدم ليشير إلى العضو الجديد
+      user.memberId = newMember._id;
+      await user.save();
+
+      // تحديث العضو الجديد ليشير إلى المستخدم وجعله isUser = true
+      newMember.userId = user._id;
+      newMember.isUser = true;
+      await newMember.save();
+
+      // إذا كان هناك عضو مرتبط سابقاً، نجعله isUser = false ونزيل userId
+      if (currentMemberId) {
+        const currentMember = await Member.findById(currentMemberId);
+        if (currentMember) {
+          currentMember.userId = undefined;
+          currentMember.isUser = false;
+          await currentMember.save();
+        }
+      }
+
+      res.status(HttpCode.OK).json({
+        success: true,
+        data: {
+          user,
+          newMember,
+        },
+        message: "Member swapped successfully",
+      });
+    }
+  );
+  
   getUsersStats = asyncWrapper(
     async (req: Request, res: Response, next: NextFunction) => {
       const familyName = "Elsaqar";

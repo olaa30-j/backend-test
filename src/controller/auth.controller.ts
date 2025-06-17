@@ -26,10 +26,9 @@ class AuthController {
         req.body;
 
       if (familyRelationship === "زوج") {
-        const existingHusband = await User.findOne({
+        const existingHusband = await Member.findOne({
           familyBranch,
           familyRelationship: "زوج",
-          status: "مقبول",
         });
 
         if (existingHusband) {

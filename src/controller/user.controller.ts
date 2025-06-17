@@ -33,8 +33,6 @@ class UserController {
         email,
         password,
         phone,
-        familyBranch,
-        familyRelationship,
         role,
         status,
         address,
@@ -70,23 +68,6 @@ class UserController {
         );
       }
 
-      if (familyRelationship === "زوج") {
-        const existingHusband = await User.findOne({
-          familyBranch,
-          familyRelationship: "زوج",
-          status: "مقبول",
-        });
-
-        if (existingHusband) {
-          return next(
-            createCustomError(
-              `Branch ${familyBranch} already has an approved husband`,
-              HttpCode.CONFLICT
-            )
-          );
-        }
-      }
-
       const permissionRole = await Permission.findOne({ role });
       let permission;
 
@@ -104,8 +85,6 @@ class UserController {
         email,
         password: hashedPwd,
         phone,
-        familyBranch,
-        familyRelationship,
         permissions: permission,
         status,
         address,
@@ -119,18 +98,11 @@ class UserController {
 
       await user.save();
 
-      const femaleRelationships = new Set(["زوجة", "ابنة"]);
-      const gender = femaleRelationships.has(familyRelationship)
-        ? "أنثى"
-        : "ذكر";
-
       const newMember = new Member({
         userId: user._id,
         fname: email.split("@")[0],
         lname: "الدهمش",
-        gender,
-        familyBranch,
-        familyRelationship,
+        gender: "ذكر",
         isUser: true,
         image: DEFAULT_IMAGE_URL,
       });
@@ -526,61 +498,55 @@ class UserController {
     }
   );
 
-swapMember = asyncWrapper(
-  async (req: Request, res: Response, next: NextFunction) => {
-    const { userId } = req.params;
-    const { newMemberId } = req.body;
+  swapMember = asyncWrapper(
+    async (req: Request, res: Response, next: NextFunction) => {
+      const { userId } = req.params;
+      const { newMemberId } = req.body;
 
-    // 1. التحقق من وجود المستخدم
-    const user = await User.findById(userId);
-    if (!user) {
-      return next(createCustomError("User not found", HttpCode.NOT_FOUND));
-    }
-
-    // 2. التحقق من وجود العضو الجديد
-    const newMember = await Member.findById(newMemberId);
-    if (!newMember) {
-      return next(createCustomError("Member not found", HttpCode.NOT_FOUND));
-    }
-
-    // 3. إذا كان العضو الجديد مرتبطًا بمستخدم آخر
-    if (newMember.userId) {
-      const existingUser = await User.findById(newMember.userId);
-      if (existingUser) {
-        existingUser.memberId = undefined;
-        await existingUser.save();
+      // التحقق من وجود المستخدم والعضو الجديد
+      const user = await User.findById(userId);
+      if (!user) {
+        return next(createCustomError("User not found", HttpCode.NOT_FOUND));
       }
+
+      const newMember = await Member.findById(newMemberId);
+      if (!newMember) {
+        return next(createCustomError("Member not found", HttpCode.NOT_FOUND));
+      }
+
+      // حفظ العضو الحالي للرجوع إليه إذا لزم الأمر
+      const currentMemberId = user.memberId;
+
+      // تحديث المستخدم ليشير إلى العضو الجديد
+      user.memberId = newMember._id;
+      await user.save();
+
+      // تحديث العضو الجديد ليشير إلى المستخدم وجعله isUser = true
+      newMember.userId = user._id;
+      newMember.isUser = true;
+      await newMember.save();
+
+      // إذا كان هناك عضو مرتبط سابقاً، نجعله isUser = false ونزيل userId
+      if (currentMemberId) {
+        const currentMember = await Member.findById(currentMemberId);
+        if (currentMember) {
+          currentMember.userId = undefined;
+          currentMember.isUser = false;
+          await currentMember.save();
+        }
+      }
+
+      res.status(HttpCode.OK).json({
+        success: true,
+        data: {
+          user,
+          newMember,
+        },
+        message: "Member swapped successfully",
+      });
     }
+  );
 
-    // 4. حفظ العضو الحالي قبل التعديل
-    const currentMemberId = user.memberId;
-
-    // 5. تحديث المستخدم بالعضو الجديد
-    user.memberId = newMember._id;
-    await user.save();
-
-    // 6. تحديث العضو الجديد بالمستخدم
-    newMember.userId = user._id;
-    newMember.isUser = true;
-    await newMember.save();
-
-    // 7. حذف العضو القديم إذا كان موجودًا
-    if (currentMemberId) {
-      await Member.findByIdAndDelete(currentMemberId);
-    }
-
-    res.status(HttpCode.OK).json({
-      success: true,
-      data: {
-        user,
-        newMember,
-        deletedMemberId: currentMemberId || null
-      },
-      message: "تم تبديل العضو وحذف العضو القديم بنجاح",
-    });
-  }
-)
-  
   getUsersStats = asyncWrapper(
     async (req: Request, res: Response, next: NextFunction) => {
       const familyName = "Elsaqar";

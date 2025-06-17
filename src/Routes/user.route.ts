@@ -30,6 +30,14 @@ router
     UserController.getAllUsers
   );
 
+  router
+  .route("/swap-member/:userId")
+  .patch(
+    authenticateUser,
+    authorizePermission("مستخدم", "update"),
+    UserController.swapMember
+  );
+
 router.route("/:id").get(authenticateUser, UserController.getUser);
 
 router
@@ -41,10 +49,6 @@ router
   );
 
 router.route("/:id").patch(authenticateUser, UserController.updateUser);
-
-router
-  .route("/:id/permissions")
-  .patch(authenticateUser, UserController.updatePermissions);
 
 router
   .route("/:id/permissions")

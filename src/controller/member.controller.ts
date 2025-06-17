@@ -290,6 +290,8 @@ class MemberController {
         .populate("wives")
         .populate("wives")
         .populate("parents")
+        .populate("parents.father")
+        .populate("parents.mother")
         .populate("children")
         .skip(skip)
         .limit(limit);

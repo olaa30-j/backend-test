@@ -46,4 +46,8 @@ router
   .route("/:id/permissions")
   .patch(authenticateUser, UserController.updatePermissions);
 
+router
+  .route("/:id/permissions")
+  .patch(authenticateUser, UserController.updatePermissions);
+
 export default router;

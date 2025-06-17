@@ -526,54 +526,49 @@ class UserController {
     }
   );
 
-    swapMember = asyncWrapper(
-    async (req: Request, res: Response, next: NextFunction) => {
-      const { userId } = req.params;
-      const { newMemberId } = req.body;
+swapMember = asyncWrapper(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { memberId } = req.params;
+    const { newUserId } = req.body;
 
-      // التحقق من وجود المستخدم والعضو الجديد
-      const user = await User.findById(userId);
-      if (!user) {
-        return next(createCustomError("User not found", HttpCode.NOT_FOUND));
-      }
-
-      const newMember = await Member.findById(newMemberId);
-      if (!newMember) {
-        return next(createCustomError("Member not found", HttpCode.NOT_FOUND));
-      }
-
-      // حفظ العضو الحالي للرجوع إليه إذا لزم الأمر
-      const currentMemberId = user.memberId;
-
-      // تحديث المستخدم ليشير إلى العضو الجديد
-      user.memberId = newMember._id;
-      await user.save();
-
-      // تحديث العضو الجديد ليشير إلى المستخدم وجعله isUser = true
-      newMember.userId = user._id;
-      newMember.isUser = true;
-      await newMember.save();
-
-      // إذا كان هناك عضو مرتبط سابقاً، نجعله isUser = false ونزيل userId
-      if (currentMemberId) {
-        const currentMember = await Member.findById(currentMemberId);
-        if (currentMember) {
-          currentMember.userId = undefined;
-          currentMember.isUser = false;
-          await currentMember.save();
-        }
-      }
-
-      res.status(HttpCode.OK).json({
-        success: true,
-        data: {
-          user,
-          newMember,
-        },
-        message: "Member swapped successfully",
-      });
+    // 1. البحث عن العضو المطلوب
+    const member = await Member.findById(memberId);
+    if (!member) {
+      return next(createCustomError("Member not found", HttpCode.NOT_FOUND));
     }
-  );
+
+    // 2. التحقق من وجود المستخدم الجديد
+    const user = await User.findById(newUserId);
+    if (!user) {
+      return next(createCustomError("User not found", HttpCode.NOT_FOUND));
+    }
+
+    // 3. إذا كان العضو مرتبطًا بمستخدم آخر
+    if (member.userId) {
+      const oldUser = await User.findById(member.userId);
+      if (oldUser) {
+        oldUser.memberId = undefined;
+        await oldUser.save();
+      }
+    }
+
+    // 4. تحديث المستخدم الجديد بالعضو
+    user.memberId = member._id;
+    await user.save();
+
+    // 5. حذف العضو القديم من قاعدة البيانات
+    await Member.findByIdAndDelete(memberId);
+
+    res.status(HttpCode.OK).json({
+      success: true,
+      data: {
+        deletedMember: member,
+        updatedUser: user
+      },
+      message: "تم حذف العضو وتحديث المستخدم بنجاح",
+    });
+  }
+);
   
   getUsersStats = asyncWrapper(
     async (req: Request, res: Response, next: NextFunction) => {

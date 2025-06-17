@@ -78,8 +78,6 @@ class AuthController {
         email,
         password: hashedPassword,
         phone: phoneNumber,
-        familyBranch,
-        familyRelationship,
         image: DEFAULT_IMAGE_URL,
       });
 

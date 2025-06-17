@@ -528,47 +528,58 @@ class UserController {
 
 swapMember = asyncWrapper(
   async (req: Request, res: Response, next: NextFunction) => {
-    const { memberId } = req.params;
-    const { newUserId } = req.body;
+    const { userId } = req.params;
+    const { newMemberId } = req.body;
 
-    // 1. البحث عن العضو المطلوب
-    const member = await Member.findById(memberId);
-    if (!member) {
-      return next(createCustomError("Member not found", HttpCode.NOT_FOUND));
-    }
-
-    // 2. التحقق من وجود المستخدم الجديد
-    const user = await User.findById(newUserId);
+    // 1. التحقق من وجود المستخدم
+    const user = await User.findById(userId);
     if (!user) {
       return next(createCustomError("User not found", HttpCode.NOT_FOUND));
     }
 
-    // 3. إذا كان العضو مرتبطًا بمستخدم آخر
-    if (member.userId) {
-      const oldUser = await User.findById(member.userId);
-      if (oldUser) {
-        oldUser.memberId = undefined;
-        await oldUser.save();
+    // 2. التحقق من وجود العضو الجديد
+    const newMember = await Member.findById(newMemberId);
+    if (!newMember) {
+      return next(createCustomError("Member not found", HttpCode.NOT_FOUND));
+    }
+
+    // 3. إذا كان العضو الجديد مرتبطًا بمستخدم آخر
+    if (newMember.userId) {
+      const existingUser = await User.findById(newMember.userId);
+      if (existingUser) {
+        existingUser.memberId = undefined;
+        await existingUser.save();
       }
     }
 
-    // 4. تحديث المستخدم الجديد بالعضو
-    user.memberId = member._id;
+    // 4. حفظ العضو الحالي قبل التعديل
+    const currentMemberId = user.memberId;
+
+    // 5. تحديث المستخدم بالعضو الجديد
+    user.memberId = newMember._id;
     await user.save();
 
-    // 5. حذف العضو القديم من قاعدة البيانات
-    await Member.findByIdAndDelete(memberId);
+    // 6. تحديث العضو الجديد بالمستخدم
+    newMember.userId = user._id;
+    newMember.isUser = true;
+    await newMember.save();
+
+    // 7. حذف العضو القديم إذا كان موجودًا
+    if (currentMemberId) {
+      await Member.findByIdAndDelete(currentMemberId);
+    }
 
     res.status(HttpCode.OK).json({
       success: true,
       data: {
-        deletedMember: member,
-        updatedUser: user
+        user,
+        newMember,
+        deletedMemberId: currentMemberId || null
       },
-      message: "تم حذف العضو وتحديث المستخدم بنجاح",
+      message: "تم تبديل العضو وحذف العضو القديم بنجاح",
     });
   }
-);
+)
   
   getUsersStats = asyncWrapper(
     async (req: Request, res: Response, next: NextFunction) => {

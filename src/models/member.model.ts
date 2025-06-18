@@ -38,7 +38,7 @@ const memberSchema = new Schema<IMember>(
     familyRelationship: {
       type: String,
       enum: {
-        values: ["ابن", "ابنة", "زوجة", "زوج", "حفيد", "أخرى", "حفيدة"],
+        values: ["ابن", "ابنة", "زوجة", "زوج", "حفيد", "أخرى", "حفيدة", "الجد الأعلى"],
         message: "{VALUE} غير مدعوم",
       },
       required: [true, "Family Relationship is required"],

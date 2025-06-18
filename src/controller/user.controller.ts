@@ -502,7 +502,7 @@ class UserController {
     }
   );
 
-  swapMember = asyncWrapper(
+swapMember = asyncWrapper(
     async (req: Request, res: Response, next: NextFunction) => {
       const { userId } = req.params;
       const { newMemberId } = req.body;
@@ -530,14 +530,9 @@ class UserController {
       newMember.isUser = true;
       await newMember.save();
 
-      // إذا كان هناك عضو مرتبط سابقاً، نجعله isUser = false ونزيل userId
+      // إذا كان هناك عضو مرتبط سابقاً، نقوم بحذفه
       if (currentMemberId) {
-        const currentMember = await Member.findById(currentMemberId);
-        if (currentMember) {
-          currentMember.userId = undefined;
-          currentMember.isUser = false;
-          await currentMember.save();
-        }
+        await Member.findByIdAndDelete(currentMemberId);
       }
 
       res.status(HttpCode.OK).json({
@@ -546,11 +541,12 @@ class UserController {
           user,
           newMember,
         },
-        message: "Member swapped successfully",
+        message: "Member swapped successfully and old member deleted",
       });
     }
   );
 
+  
   getUsersStats = asyncWrapper(
     async (req: Request, res: Response, next: NextFunction) => {
       const familyName = "Elsaqar";

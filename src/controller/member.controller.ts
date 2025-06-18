@@ -590,6 +590,8 @@ class MemberController {
         .populate("userId")
         .populate("husband")
         .populate("wives")
+        .populate("parents.father")
+        .populate("parents.mother")
         .populate("parents")
         .populate("children");
 
@@ -642,6 +644,8 @@ class MemberController {
         .populate("userId")
         .populate("husband")
         .populate("wives")
+        .populate("parents.father")
+        .populate("parents.mother")
         .populate("wives")
         .populate("parents")
         .populate("children")

@@ -16,7 +16,7 @@ const DEFAULT_IMAGE_URL =
   "https://res.cloudinary.com/dmhvfuuke/image/upload/v1750092490/avatar_bdtadk.jpg";
 
 class UserController {
-  createUser = asyncWrapper(
+    createUser = asyncWrapper(
     async (req: Request, res: Response, next: NextFunction) => {
       const familyName = "Elsaqar";
 
@@ -34,6 +34,8 @@ class UserController {
         password,
         phone,
         role,
+        familyBranch,
+        familyRelationship,
         status,
         address,
       } = req.body;
@@ -102,6 +104,8 @@ class UserController {
         userId: user._id,
         fname: email.split("@")[0],
         lname: "الدهمش",
+        familyBranch: familyBranch,
+        familyRelationship: familyRelationship,
         gender: "ذكر",
         isUser: true,
         image: DEFAULT_IMAGE_URL,

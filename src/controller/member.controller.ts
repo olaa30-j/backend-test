@@ -39,10 +39,24 @@ class MemberController {
         );
       }
 
-      if (familyRelationship === "زوج") {
+      // check fullName is unique
+      const fullName = `${fname} ${lname}`;
+      req.body.fullName = fullName;
+
+      const existingMember = await Member.findOne({ fullName });
+      if (existingMember) {
+        return next(
+          createCustomError(
+            `يوجد بالفعل عضو باسم '${fullName}'. يرجى اسم اضافى لتمييز فريد مثل '${fullName} 1'.`,
+            HttpCode.BAD_REQUEST
+          )
+        );
+      }
+
+      if (familyRelationship === "الجدالأعلى") {
         const existingHead = await Member.findOne({
           familyBranch,
-          familyRelationship: "زوج",
+          familyRelationship: "الجدالأعلى",
         });
 
         if (existingHead) {
@@ -57,7 +71,7 @@ class MemberController {
         if (gender !== "ذكر") {
           return next(
             createCustomError(
-              "Family head (زوج) must be male",
+              "Family head (الجدالأعلى) must be male",
               HttpCode.BAD_REQUEST
             )
           );
@@ -105,6 +119,15 @@ class MemberController {
             )
           );
         }
+
+        // check husband doesot include the wife add her
+        if (!husbandMember.wives?.includes(req.body._id)) {
+          await Member.findByIdAndUpdate(
+            husband,
+            { $addToSet: { wives: req.body._id } },
+            { new: true }
+          );
+        }
       }
 
       if (parents?.father || parents?.mother) {
@@ -117,6 +140,29 @@ class MemberController {
         }
       }
 
+      // check if parents have the child, if donot have add the child in father and mother schema
+      req.body.parents = req.body.parents || {};
+
+      if (parents?.father || parents?.mother) {
+        if (parents.father && mongoose.Types.ObjectId.isValid(parents.father)) {
+          req.body.parents.father = parents.father;
+          await Member.findByIdAndUpdate(
+            parents.father,
+            { $addToSet: { children: req.body._id } },
+            { new: true }
+          );
+        }
+
+        if (parents.mother && mongoose.Types.ObjectId.isValid(parents.mother)) {
+          req.body.parents.mother = parents.mother;
+          await Member.findByIdAndUpdate(
+            parents.mother,
+            { $addToSet: { children: req.body._id } },
+            { new: true }
+          );
+        }
+      }
+
       if (
         children &&
         typeof children === "string" &&
@@ -124,6 +170,7 @@ class MemberController {
       ) {
         req.body.children = [children];
       }
+
       const member = await Member.create(req.body);
 
       await notifyUsersWithPermission(
@@ -150,6 +197,7 @@ class MemberController {
     }
   );
 
+
   updateMember = asyncWrapper(
     async (req: Request, res: Response, next: NextFunction) => {
       const { id } = req.params;
@@ -174,10 +222,10 @@ class MemberController {
         req.body.image = req.file.path.replace(/\\/g, "/");
       }
 
-      if (familyRelationship === "زوج" && member.familyRelationship !== "زوج") {
+      if (familyRelationship === "الجدالأعلى" && member.familyRelationship !== "الجدالأعلى") {
         const existingHead = await Member.findOne({
           familyBranch,
-          familyRelationship: "زوج",
+          familyRelationship: "الجدالأعلى",
           _id: { $ne: member._id },
         });
         if (existingHead) {
@@ -290,8 +338,6 @@ class MemberController {
         .populate("wives")
         .populate("wives")
         .populate("parents")
-        .populate("parents.father")
-        .populate("parents.mother")
         .populate("children")
         .skip(skip)
         .limit(limit);
@@ -321,6 +367,8 @@ class MemberController {
         .populate("husband")
         .populate("wives")
         .populate("parents")
+        .populate("parents.father")
+        .populate("parents.mother")
         .populate("children");
 
       if (!member) {
